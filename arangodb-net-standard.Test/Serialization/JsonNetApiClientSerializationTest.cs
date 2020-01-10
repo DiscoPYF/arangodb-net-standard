@@ -44,5 +44,40 @@ namespace ArangoDBNetStandardTest.Serialization
             Assert.Equal("myvalue", model.PropertyToCamelCase);
             Assert.Equal("something", model.NullPropertyToIgnore);
         }
+
+        [Fact]
+        public void Serialize_ShouldKeepUserModelsIntact_WhenTypeIsCursorOrTransactionBody()
+        {
+            var model = new TestModelToKeepWithDefault()
+            {
+                PropertyNameToKeepIntact = "something",
+                NullPropertyToKeep = null,
+                NullPropertyToIgnore = null
+            };
+
+            var body = new ArangoDBNetStandard.CursorApi.Models.PostCursorBody()
+            {
+                BindVars = new System.Collections.Generic.Dictionary<string, object>()
+                {
+                    { "MyModel", model },
+                    { "MyBindingParam", "aParamValue" }
+                }
+            };
+
+            var serialization = new JsonNetApiClientSerialization();
+
+            byte[] jsonBytes = serialization.Serialize(body, true, true);
+
+            string jsonString = Encoding.UTF8.GetString(jsonBytes);
+
+            Assert.DoesNotContain("myModel", jsonString);
+            Assert.DoesNotContain("myBindingParam", jsonString);
+            Assert.DoesNotContain(nameof(TestModelToKeepWithDefault.NullPropertyToIgnore), jsonString);
+
+            Assert.Contains("MyModel", jsonString);
+            Assert.Contains("MyBindingParam", jsonString);
+            Assert.Contains(nameof(TestModelToKeepWithDefault.PropertyNameToKeepIntact), jsonString);
+            Assert.Contains(nameof(TestModelToKeepWithDefault.NullPropertyToKeep), jsonString);
+        }
     }
 }

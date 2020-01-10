@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace ArangoDBNetStandard.Serialization
@@ -10,6 +13,19 @@ namespace ArangoDBNetStandard.Serialization
     /// </summary>
     public class JsonNetApiClientSerialization : IApiClientSerialization
     {
+        private readonly static IDictionary<System.Type, string[]> _specialPropertyNamesByType =
+            new Dictionary<System.Type, string[]>()
+            {
+                {
+                    typeof(CursorApi.Models.PostCursorBody),
+                    new string[]{ nameof(CursorApi.Models.PostCursorBody.BindVars) }
+                },
+                {
+                    typeof(TransactionApi.Models.PostTransactionBody),
+                    new string[]{ nameof(TransactionApi.Models.PostTransactionBody.Params) }
+                }
+            };
+
         /// <summary>
         /// Deserializes the JSON structure contained by the specified stream
         /// into an instance of the specified type.
@@ -49,17 +65,46 @@ namespace ArangoDBNetStandard.Serialization
             bool useCamelCasePropertyNames,
             bool ignoreNullValues)
         {
-            var jsonSettings = new JsonSerializerSettings
-            {
-                NullValueHandling = ignoreNullValues ? NullValueHandling.Ignore : NullValueHandling.Include
-            };
+            string json;
 
-            if (useCamelCasePropertyNames)
+            if (_specialPropertyNamesByType.ContainsKey(typeof(T)))
             {
-                jsonSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                var jsonSerializer = new JsonSerializer()
+                {
+                    NullValueHandling = ignoreNullValues ? NullValueHandling.Ignore : NullValueHandling.Include,
+                    ContractResolver = new CamelCasePropertyNamesContractResolver()
+                };
+
+                var specialTypeJObject = JObject.FromObject(item, jsonSerializer);
+
+                foreach (string specialPropertyName in _specialPropertyNamesByType[typeof(T)])
+                {
+                    var propertyInfo = typeof(T).GetProperty(specialPropertyName);
+
+                    var specialPropertyValueJObject = JObject.FromObject(propertyInfo.GetValue(item));
+
+                    string propertyNameToReplace = char.ToLowerInvariant(specialPropertyName[0]) +
+                        specialPropertyName.Substring(1);
+
+                    specialTypeJObject[propertyNameToReplace] = specialPropertyValueJObject;
+                }
+
+                json = specialTypeJObject.ToString(Formatting.None);
             }
+            else
+            {
+                var jsonSettings = new JsonSerializerSettings
+                {
+                    NullValueHandling = ignoreNullValues ? NullValueHandling.Ignore : NullValueHandling.Include
+                };
 
-            string json = JsonConvert.SerializeObject(item, jsonSettings);
+                if (useCamelCasePropertyNames)
+                {
+                    jsonSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                }
+
+                json = JsonConvert.SerializeObject(item, jsonSettings);
+            }
 
             return Encoding.UTF8.GetBytes(json);
         }
