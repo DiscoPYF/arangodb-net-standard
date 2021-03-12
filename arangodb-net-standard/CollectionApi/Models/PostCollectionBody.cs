@@ -1,4 +1,6 @@
-﻿namespace ArangoDBNetStandard.CollectionApi.Models
+﻿using System.Collections.Generic;
+
+namespace ArangoDBNetStandard.CollectionApi.Models
 {
     public class PostCollectionBody
     {
@@ -22,7 +24,7 @@
 
         public int? ReplicationFactor { get; set; }
 
-        public string ShardKeys { get; set; }
+        public IEnumerable<string> ShardKeys { get; set; }
 
         public string ShardingStrategy { get; set; }
 

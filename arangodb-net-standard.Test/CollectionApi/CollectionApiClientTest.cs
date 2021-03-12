@@ -116,6 +116,22 @@ namespace ArangoDBNetStandardTest.CollectionApi
         }
 
         [Fact]
+        public async Task PostCollectionAsync_ShouldSucceed_WhenSharding()
+        {
+            var response = await _collectionApi.PostCollectionAsync(
+                new PostCollectionBody
+                {
+                    Name = "MyEdgeCollection",
+                    NumberOfShards = 4,
+                    ShardKeys = new string[] { "country" },
+                    ReplicationFactor = 2
+                });
+
+            Assert.False(response.Error);
+            Assert.NotNull(response.Id);
+        }
+
+        [Fact]
         public async Task PostCollectionAsync_ShouldUseQueryParameter()
         {
             var mockTransport = new Mock<IApiClientTransport>();

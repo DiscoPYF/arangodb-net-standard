@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 
 namespace ArangoDBNetStandard.CollectionApi.Models
 {
@@ -10,7 +11,7 @@ namespace ArangoDBNetStandard.CollectionApi.Models
         public CollectionKeyOptions KeyOptions { get; set; }
         public bool IsVolatile { get; set; }
         public int? NumberOfShards { get; set; }
-        public string ShardKeys { get; set; }
+        public IEnumerable<string> ShardKeys { get; set; }
         public int? ReplicationFactor { get; set; }
         public string ShardingStrategy { get; set; }
 
