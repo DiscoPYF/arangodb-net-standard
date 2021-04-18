@@ -1,7 +1,9 @@
-﻿using ArangoDBNetStandard.CursorApi.Models;
+﻿using ArangoDBNetStandard;
+using ArangoDBNetStandard.CursorApi.Models;
 using ArangoDBNetStandard.Serialization;
 using ArangoDBNetStandard.TransactionApi.Models;
 using ArangoDBNetStandardTest.Serialization.Models;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -25,7 +27,7 @@ namespace ArangoDBNetStandardTest.Serialization
             var serialization = new JsonNetApiClientSerialization();
 
             // Perform serialize with camel case option
-            byte[] jsonBytesWithCamelCase = serialization.Serialize(model, 
+            byte[] jsonBytesWithCamelCase = serialization.Serialize(model,
                 new ApiClientSerializationOptions(true, true, true));
             string jsonStringWithCamelCase = Encoding.UTF8.GetString(jsonBytesWithCamelCase);
 
@@ -46,7 +48,7 @@ namespace ArangoDBNetStandardTest.Serialization
                 jsonStringWithCamelCase,
                 System.StringComparison.OrdinalIgnoreCase);
 
-            Assert.DoesNotContain("nullPropertyToIgnore", 
+            Assert.DoesNotContain("nullPropertyToIgnore",
                 jsonStringWithoutCamelCase,
                 System.StringComparison.OrdinalIgnoreCase);
 
@@ -183,6 +185,43 @@ namespace ArangoDBNetStandardTest.Serialization
 
             Assert.Equal("myvalue", model.PropertyToCamelCase);
             Assert.Equal("something", model.NullPropertyToIgnore);
+        }
+
+        [Fact]
+        public void DeserializeFromStream_ShouldReturnNull_WhenDeserializingEmptyContent()
+        {
+            byte[] jsonBytes = Encoding.UTF8.GetBytes("");
+
+            var stream = new MemoryStream(jsonBytes);
+
+            var serialization = new JsonNetApiClientSerialization();
+
+            var result = serialization.DeserializeFromStream<ApiErrorResponse>(stream);
+
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void DeserializeFromStream_ShouldThrow_WhenDeserializingMalformedContent()
+        {
+            byte[] jsonBytes = Encoding.UTF8.GetBytes("{ hello");
+
+            var stream = new MemoryStream(jsonBytes);
+
+            var serialization = new JsonNetApiClientSerialization();
+
+            bool exceptionThrown = false;
+
+            try
+            {
+                var result = serialization.DeserializeFromStream<ApiErrorResponse>(stream);
+            }
+            catch (JsonReaderException)
+            {
+                exceptionThrown = true;
+            }
+
+            Assert.True(exceptionThrown);
         }
     }
 }

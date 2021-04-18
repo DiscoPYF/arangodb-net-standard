@@ -1093,5 +1093,43 @@ namespace ArangoDBNetStandardTest.DocumentApi
 
             Assert.Equal(HttpStatusCode.NotFound, response.Code);
         }
+
+        [Fact]
+        public async Task GetApiErrorException_ShouldThrow_WhenResponseIsEmpty()
+        {
+            var mockTransport = new Mock<IApiClientTransport>();
+
+            var mockResponse = new Mock<IApiClientResponse>();
+
+            var mockResponseContent = new Mock<IApiClientResponseContent>();
+
+            mockResponseContent.Setup(x => x.ReadAsStreamAsync())
+                .Returns(Task.FromResult<System.IO.Stream>(
+                    new System.IO.MemoryStream(
+                        System.Text.Encoding.UTF8.GetBytes(""))));
+
+            mockResponse.Setup(x => x.Content)
+                .Returns(mockResponseContent.Object);
+
+            mockResponse.Setup(x => x.IsSuccessStatusCode)
+                .Returns(false);
+
+            string requestUri = null;
+
+            mockTransport.Setup(x => x.GetAsync(It.IsAny<string>()))
+                .Returns((string uri) =>
+                {
+                    requestUri = uri;
+                    return Task.FromResult(mockResponse.Object);
+                });
+
+            var client = new DocumentApiClient(mockTransport.Object);
+
+            ApiErrorException ex = await Assert.ThrowsAsync<ApiErrorException>(
+                () => client.GetDocumentAsync<object>("clx/0123456789"));
+
+            Assert.NotNull(requestUri);
+            Assert.NotNull(ex);
+        }
     }
 }
